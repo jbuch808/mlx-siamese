@@ -16,13 +16,14 @@ Implementation of a simple Siamese Network using Apple's MLX Framework. Trained 
   - 87k images with 29 classes (3k/class)
   - Train: 60k, Test: 18k, Val: 9k
   - Test and Validation classes not included in training dataset to observe how well the model can generalize to unseen classes.
-  - See demos/eda.ipynb for more info.
+  - Run scripts in demos/eda.ipynb to get data setup for training.
 - Training
   - In train.py, update DATA_PATH and BASE_OUTPUT_PATH
   - See training args: python train.py --help
   - See utils/model.py to define a custom model
   - See utils/transforms.py to define custom data augmentations.
   - Run: python train.py
+  - Run python train.py --help for info on optional args.
 - Testing
   - 29-ways K-Shot testing done with a batch size of 1.
   - See demos/Test_models.ipynb

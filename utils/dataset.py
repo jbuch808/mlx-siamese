@@ -6,14 +6,14 @@ import random
 from utils.transforms import get_transform
 
 
-def get_dataloaders(data_paths, data_labels, transform_type, k=1, batch_size=32):
+def get_dataloaders(data_paths, data_labels, transform_type, k=1, batch_size=32, height=200, width=200):
     info_path = f'{data_paths[0]}../dataset_info.pickle'
     with open(info_path, 'rb') as handle:
         info = pickle.load(handle)
 
     output = []
     for data_path, data_label in zip(data_paths, data_labels):
-        transform = get_transform(data_label, transform_type)
+        transform = get_transform(data_label, transform_type, height, width)
         ds = AslDataset(data_path, info[data_label], data_label, transform)
         if data_label == 'train' or data_label == 'val':
             output.append(TrainDataLoader(ds, batch_size=batch_size))

@@ -1,5 +1,6 @@
 from utils.loss import threshold_contrastive_loss
 import mlx.core as mx
+import numpy as np
 from sklearn.metrics import confusion_matrix
 import time
 from tqdm import tqdm
@@ -73,6 +74,57 @@ def eval_model_inference(model, data_loader, support_set, support_classes, margi
     )
 
     return acc, ave_inference, cm, cm_labels
+
+
+# TODO add confusion matrix calc
+def eval_model_batches(model, data_loader, support_set, support_classes, margin, k, batch_size):
+    # Calculate Feature Vectors for Support Set
+    support_feature_vecs = model(support_set)
+
+    # Tile Matrix to create batch_size * k rows to compare every anchor feature with
+    support_feature_vecs_batch = mx.array(np.tile(np.array(support_feature_vecs), (batch_size, 1)))
+
+    correct = 0
+    total = 0
+    y_true = []
+    y_pred = []
+    num_support = len(support_classes)
+    batch_indexs = mx.array(np.arange(0, batch_size * num_support, num_support))
+    loop = tqdm(data_loader)
+    loop.set_description(f'Testing Model | K = {k}')
+    model.eval()
+    for anchors, anchor_classes in loop:
+        anchor_feature_vecs = model(anchors)
+        anchor_feature_vecs_batch = mx.array(np.repeat(np.array(anchor_feature_vecs), num_support, axis=0))
+        if len(anchor_feature_vecs_batch) != len(support_feature_vecs_batch):
+            support_feature_vecs_batch = mx.array(np.tile(np.array(support_feature_vecs), (len(anchors), 1)))
+            batch_indexs = mx.array(np.arange(0, len(anchors) * num_support, num_support))
+
+        preds, dists = threshold_contrastive_loss(anchor_feature_vecs_batch, support_feature_vecs_batch, margin)
+
+        dists = dists.reshape(-1, num_support)
+        min_dist_indexs = mx.argmin(dists, axis=1)
+        min_dist_indexs += batch_indexs
+
+        batch_support_classes_indexs = min_dist_indexs % num_support
+        batch_support_classes = np.array([support_classes[idx.item()] for idx in batch_support_classes_indexs])
+
+        batch_correct = np.sum(anchor_classes == batch_support_classes)
+        batch_total = len(anchors)
+        batch_acc = batch_correct / batch_total * 100
+        correct += batch_correct
+        total += batch_total
+        y_true.extend(anchor_classes)
+        y_pred.extend(batch_support_classes)
+
+        batch_acc_str = f'{batch_acc:.2f}%'
+        loop.set_postfix({"Batch Acc": batch_acc_str})
+        loop.update(1)
+
+    loop.close()
+    acc = correct / total * 100
+    print(f'K = {k} | Accuracy: {acc}%')
+    return acc, y_true, y_pred
 
 
 def val_epoch(epoch, model, val_loader, margin):

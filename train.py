@@ -25,13 +25,14 @@ DATA_LABELS = ['train', 'val']
 TRANSFORM_OPTIONS = ['none', 'blur', 'all']
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("--model_num", type=int, default=1, choices=[1, 3, 4], help="model architecture number")
+parser.add_argument("--model_num", type=int, default=1, choices=[1, 3, 4, 6], help="model architecture number")
 parser.add_argument("--epochs", type=int, default=30, help="number of epochs")
 parser.add_argument("--lr", type=float, default=1e-3, help="learning rate")
 parser.add_argument("--batch_size", type=int, default=32, help="batch size")
 parser.add_argument("--margin", type=float, default=1.0, help="contrastive loss margin")
 parser.add_argument("--diverge_max", type=int, default=3, help="max number of divergence epochs")
 parser.add_argument("--transform_type", choices=TRANSFORM_OPTIONS, default='all', help="training data transformations options")
+parser.add_argument("--pretrained_weights", default=None, help="Path to pretrained weights")
 parser.add_argument("--cpu", action="store_true", help="use cpu only")
 parser.add_argument("--seed", type=int, default=92, help="random seed")
 
@@ -49,7 +50,7 @@ def train_epoch(epoch, model, train_loader, optimizer, loss_fn):
     state = [model.state, optimizer.state,  mx.random.state]
 
     # TODO: currently compiling crashes with error: IndexError: unordered_map::at: key not found
-    @partial(mx.compile, inputs=state, outputs=state)
+    # @partial(mx.compile, inputs=state, outputs=state)
     def step(anchors, contrasts, labels):
         train_step_fn = nn.value_and_grad(model, train_step)
         loss, grads = train_step_fn(model, anchors, contrasts, labels)
@@ -138,7 +139,7 @@ def main():
         mx.set_default_device(mx.cpu)
     else:
         mx.set_default_device(mx.gpu)
-    mx.random.seed(92)
+    mx.random.seed(args['seed'])
 
     # Get Output Paths and Save Args
     output_idx = len(glob(BASE_OUTPUT_PATH + '*')) + 1
@@ -150,6 +151,10 @@ def main():
 
     train_loader, val_loader = get_dataloaders(DATA_PATHS, DATA_LABELS, args['transform_type'], batch_size=args['batch_size'])
     model = get_siamese_model(args['model_num'])
+
+    if args['pretrained_weights'] and os.path.isfile(args['pretrained_weights']):
+        model.load_weights(args['pretrained_weights'])
+
     optimizer = optim.Adam(learning_rate=args['lr'])
     loss_fn = ContrastiveLoss()
 

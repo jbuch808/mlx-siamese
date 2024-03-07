@@ -12,6 +12,8 @@ def get_siamese_model(model_num):
         model = SiameseNetwork3()
     elif model_num == 4:
         model = SiameseNetwork4()
+    elif model_num == 6:
+        model = SiameseNetwork6()
     else:
         model = SiameseNetwork1()
     return model
@@ -160,6 +162,54 @@ class SiameseNetwork4(nn.Module):
     def forward(self, x):
         output = self.cnn(x)
         return output
+
+    def __call__(self, input1, input2=None):
+        output1 = self.forward(input1)
+        if input2 is None:
+            return output1
+
+        output2 = self.forward(input2)
+        return output1, output2
+
+class SiameseNetwork6(nn.Module):
+    def __init__(self):
+        super(SiameseNetwork6, self).__init__()
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=5, padding=2, stride=1),
+            nn.BatchNorm(64),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(64, 128, kernel_size=5, padding=2, stride=1),
+            nn.BatchNorm(128),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(128, 256, kernel_size=3, padding=1, stride=1),
+            nn.BatchNorm(256),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(256, 512, kernel_size=3, padding=1, stride=1),
+            nn.BatchNorm(512),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2)
+        )
+
+        self.adaptive_pool = nn.AvgPool2d(kernel_size=2, stride=2)
+
+        self.fc = nn.Sequential(
+            # Fully Connected Layer
+            Flatten(),
+            nn.Linear(18432, 1024),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+            nn.BatchNorm(1024),
+        )
+
+    def forward(self, x):
+        return self.fc(self.adaptive_pool(self.cnn(x)))
 
     def __call__(self, input1, input2=None):
         output1 = self.forward(input1)
