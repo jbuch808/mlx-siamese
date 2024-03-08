@@ -23,6 +23,7 @@ Implementation of a simple Siamese Network using Apple's MLX Framework. Trained 
   - See utils/model.py to define a custom model
   - See utils/transforms.py to define custom data augmentations.
   - Run: python train.py
+    - Note: If you don't have a Apple Silicon ARM chip, you must use the "--cpu" arg.
   - Run python train.py --help for info on optional args.
 - Testing
   - 29-ways K-Shot testing done with a batch size of 1.
